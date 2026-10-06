@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-base-950 font-sans text-ink-primary antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+    font-variant-ligatures: contextual;
+  }
+
+  /* Smooth in-page anchor scrolling, unless the user opted out of motion */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Visible keyboard focus everywhere, never on mouse clicks */
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-base-950;
+  }
+
+  /* Tabular, aligned digits for every number we render in mono */
+  .font-mono,
+  code,
+  kbd {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: rgba(43, 214, 255, 0.28);
+  }
+}
+
+@layer components {
+  .shell {
+    @apply mx-auto w-full max-w-shell px-gutter sm:px-6 lg:px-8;
+  }
+
+  /* Raised surface: the one card treatment used across the product */
+  .surface {
+    @apply rounded-card border border-hairline bg-base-900 shadow-raised;
+  }
+
+  .surface-panel {
+    @apply rounded-panel border border-hairline bg-base-900 shadow-panel;
+  }
+
+  /* Hover lift for interactive cards — transform + border only */
+  .card-interactive {
+    @apply transition-[transform,border-color,background-color] duration-base ease-out
+           hover:-translate-y-0.5 hover:border-hairline-strong hover:bg-base-800;
+  }
+
+  /* Native checkbox restyled for the dark surface; accent-color keeps the
+     checked state and the focus ring native and accessible. */
+  .checkbox {
+    @apply h-4 w-4 shrink-0 cursor-pointer appearance-none rounded-[0.25rem]
+           border border-hairline-strong bg-base-800
+           transition-[background-color,border-color] duration-base ease-out
+           checked:border-accent checked:bg-accent
+           hover:border-accent/60
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
+           focus-visible:ring-offset-2 focus-visible:ring-offset-base-900
+           disabled:cursor-not-allowed disabled:opacity-60;
+    background-image: none;
+  }
+
+  .checkbox:checked {
+    /* Tick drawn in the base colour so it reads against the accent fill */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23070B14' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3.5 8.5 3 3 6-6'/%3E%3C/svg%3E");
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  .eyebrow {
+    @apply text-eyebrow uppercase text-accent-300;
+  }
+}
+
+@layer utilities {
+  /* Mask a drawn line/grid so it fades out instead of ending abruptly */
+  .mask-fade-b {
+    mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  }
+
+  .mask-fade-radial {
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, black 40%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, black 40%, transparent 100%);
+  }
+}
+
+/* Final safety net: if the OS asks for less motion, stop everything moving.
+   Components also branch on this, but this catches CSS-only animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
