@@ -5,6 +5,7 @@ import { PageHeader } from '../components/app/PageHeader'
 import { Button } from '../components/ui/Button'
 import { StatTile } from '../components/ui/StatTile'
 import { Skeleton, SkeletonLines, LoadingRegion } from '../components/ui/Skeleton'
+import { ErrorState } from '../components/ui/ErrorState'
 import { InvoicesPerDayChart } from '../components/dashboard/InvoicesPerDayChart'
 import { TopRiskReasons } from '../components/dashboard/TopRiskReasons'
 import { RecentAlerts } from '../components/dashboard/RecentAlerts'
@@ -51,8 +52,24 @@ export default function Dashboard() {
   const loadStats = useCallback(() => getDashboardStats(), [])
   const loadAlerts = useCallback(() => getRecentAlerts(8), [])
 
-  const { data: stats, loading: statsLoading } = useAsync(loadStats, [])
-  const { data: alerts, loading: alertsLoading } = useAsync(loadAlerts, [])
+  // `error` and `reload` were being discarded, which is what caused this page
+  // to read stats.today off null once a request failed.
+  const {
+    data: stats,
+    loading: statsLoading,
+    error: statsError,
+    reload: reloadStats,
+  } = useAsync(loadStats, [])
+  const {
+    data: alerts,
+    loading: alertsLoading,
+    error: alertsError,
+    reload: reloadAlerts,
+  } = useAsync(loadAlerts, [])
+
+  // One guard for the whole tiles-and-charts block: nothing below may read a
+  // field off `stats` unless this is true.
+  const hasStats = !statsLoading && !statsError && stats !== null
 
   const firstName = user?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'there'
 
@@ -86,7 +103,15 @@ export default function Dashboard() {
             </div>
           </div>
         </LoadingRegion>
-      ) : (
+      ) : statsError ? (
+        <div className="surface">
+          <ErrorState
+            error={statsError}
+            onRetry={reloadStats}
+            title="Today’s figures did not load"
+          />
+        </div>
+      ) : !hasStats ? null : (
         <motion.div
           variants={gridVariants}
           initial="hidden"
@@ -158,6 +183,12 @@ export default function Dashboard() {
               <Skeleton className="h-6 w-56" />
               <Skeleton className="mt-4 h-56 w-full sm:h-64" />
             </LoadingRegion>
+          ) : statsError ? (
+            <ErrorState error={statsError} onRetry={reloadStats} />
+          ) : !hasStats || !stats.perDay?.length ? (
+            <p className="py-10 text-center text-[0.84rem] text-ink-muted">
+              No invoices have arrived in the last 14 days.
+            </p>
           ) : (
             <InvoicesPerDayChart data={stats.perDay} />
           )}
@@ -171,8 +202,11 @@ export default function Dashboard() {
             <LoadingRegion label="Loading top risk reasons">
               <SkeletonLines count={6} />
             </LoadingRegion>
+          ) : statsError ? (
+            <ErrorState error={statsError} onRetry={reloadStats} />
           ) : (
-            <TopRiskReasons reasons={stats.topReasons} />
+            // TopRiskReasons renders its own empty state for an empty list.
+            <TopRiskReasons reasons={hasStats ? (stats.topReasons ?? []) : []} />
           )}
         </Panel>
       </div>
@@ -201,8 +235,11 @@ export default function Dashboard() {
               ))}
             </div>
           </LoadingRegion>
+        ) : alertsError ? (
+          <ErrorState error={alertsError} onRetry={reloadAlerts} />
         ) : (
-          <RecentAlerts alerts={alerts} />
+          // RecentAlerts renders its own empty state for an empty list.
+          <RecentAlerts alerts={alerts ?? []} />
         )}
       </Panel>
     </div>

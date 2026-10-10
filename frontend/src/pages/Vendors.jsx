@@ -5,6 +5,7 @@ import { BadgeCheck, Building2, Landmark, Search, SearchX } from 'lucide-react'
 import { PageHeader } from '../components/app/PageHeader'
 import { DataTable } from '../components/ui/DataTable'
 import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorState } from '../components/ui/ErrorState'
 import { Skeleton } from '../components/ui/Skeleton'
 import { listVendors, VENDOR_TABS } from '../services/vendors'
 import { useAsync } from '../hooks/useAsync'
@@ -81,7 +82,7 @@ export default function Vendors() {
     () => listVendors({ tab, search, sort, direction }),
     [tab, search, sort, direction],
   )
-  const { data, loading } = useAsync(loader, [tab, search, sort, direction])
+  const { data, loading, error, reload } = useAsync(loader, [tab, search, sort, direction])
 
   const rows = data?.rows ?? []
 
@@ -254,7 +255,9 @@ export default function Vendors() {
           </div>
         </div>
 
-        {!loading && rows.length === 0 ? (
+        {error ? (
+          <ErrorState error={error} onRetry={reload} title="The vendor list did not load" />
+        ) : !loading && rows.length === 0 ? (
           <EmptyState
             icon={SearchX}
             title="No vendors match"

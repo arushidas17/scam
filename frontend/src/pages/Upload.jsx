@@ -51,9 +51,11 @@ export default function UploadPage() {
       .then((result) => {
         if (runRef.current === runId) setExtraction(result)
       })
-      .catch(() => {
+      .catch((err) => {
         if (runRef.current !== runId) return
-        setError('That document could not be read. Try uploading it again.')
+        // Show what the backend actually said — "unsupported file type" and
+        // "the server is down" need different responses from the user.
+        setError(err?.message || 'That document could not be read. Try uploading it again.')
         setStep('upload')
       })
   }, [])
@@ -62,15 +64,17 @@ export default function UploadPage() {
     setSaving(true)
     setError('')
     try {
-      const result = await saveInvoice(values)
+      // The backend created the row during extraction; corrections are saved
+      // against it rather than creating a second invoice.
+      const result = await saveInvoice({ ...values, invoiceId: extraction?.invoiceId })
       setSaved(result)
       setStep('result')
-    } catch {
-      setError('That invoice could not be saved. Try again.')
+    } catch (err) {
+      setError(err?.message || 'That invoice could not be saved. Try again.')
     } finally {
       setSaving(false)
     }
-  }, [])
+  }, [extraction])
 
   return (
     <div className="mx-auto w-full max-w-[72rem] space-y-6">
@@ -105,7 +109,7 @@ export default function UploadPage() {
             {!extraction ? (
               // Processing: preview with a sweep, and the checklist ticking off.
               <div className="grid items-start gap-4 lg:grid-cols-[1fr_1fr]">
-                <DocumentPreview fileName={file?.name} scanning />
+                <DocumentPreview fileName={file?.name} file={file} scanning />
                 <div className="surface p-6">
                   <h3 className="text-[0.95rem] font-semibold text-ink-primary">
                     Reading your invoice
@@ -121,7 +125,11 @@ export default function UploadPage() {
             ) : (
               // Extracted: preview on the left, editable fields on the right.
               <div className="grid items-start gap-4 lg:grid-cols-[0.85fr_1.15fr]">
-                <DocumentPreview fileName={file?.name} />
+                <DocumentPreview
+                  fileName={file?.name}
+                  documentUrl={extraction?.documentUrl}
+                  file={file}
+                />
                 <div className="surface p-5 sm:p-6">
                   <h3 className="text-[0.95rem] font-semibold text-ink-primary">
                     Check the extracted fields

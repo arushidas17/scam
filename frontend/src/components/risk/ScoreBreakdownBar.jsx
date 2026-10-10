@@ -6,7 +6,7 @@ import { useReducedMotion } from '../../hooks/useReducedMotion'
 /**
  * One horizontal bar split into a segment per flag, sized by the points that
  * flag contributed. The segments add up to the score because the data does —
- * see the invariant in lib/mockInvoices.
+ * the backend guarantees this, see backend/app/services/risk_rules.py.
  */
 export function ScoreBreakdownBar({ flags = [], score, play = true, baseDelay = 0.25 }) {
   const reduced = useReducedMotion()

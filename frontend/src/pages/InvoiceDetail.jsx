@@ -5,6 +5,7 @@ import { RiskGauge } from '../components/ui/RiskGauge'
 import { StatusPill } from '../components/ui/StatusPill'
 import { Skeleton, SkeletonLines, LoadingRegion } from '../components/ui/Skeleton'
 import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorState } from '../components/ui/ErrorState'
 import { MaskedAccount } from '../components/ui/MaskedValue'
 import { useToast } from '../components/ui/useToast'
 import { ScoreBreakdownBar } from '../components/risk/ScoreBreakdownBar'
@@ -51,7 +52,7 @@ export default function InvoiceDetail() {
   const reduced = useReducedMotion()
 
   const loader = useCallback(() => getInvoice(id), [id])
-  const { data: invoice, loading, error } = useAsync(loader, [id])
+  const { data: invoice, loading, error, reload } = useAsync(loader, [id])
 
   const [highlighted, setHighlighted] = useState(null)
   const [decision, setDecision] = useState(null)
@@ -72,8 +73,8 @@ export default function InvoiceDetail() {
   // no timer needed to stop it.
   const play = !reduced
 
-  const handleDecide = async (action, note) => {
-    const result = await decideInvoice(id, action, note)
+  const handleDecide = async (action, note, verified = false) => {
+    const result = await decideInvoice(id, action, note, verified)
     setDecision(result.decision)
     setActivity(result.activity)
 
@@ -105,7 +106,17 @@ export default function InvoiceDetail() {
     )
   }
 
-  if (error || !invoice) {
+  if (error && error.status !== 404) {
+    return (
+      <div className="mx-auto w-full max-w-[86rem]">
+        <div className="surface">
+          <ErrorState error={error} onRetry={reload} title="This invoice did not load" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!invoice) {
     return (
       <div className="mx-auto w-full max-w-[86rem]">
         <div className="surface">

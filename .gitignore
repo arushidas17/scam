@@ -1,1 +1,8 @@
-.vite/
+   .env
+   .env.*
+   !.env.example
+   node_modules/
+   .vite/
+   dist/
+   .venv/
+   __pycache__/

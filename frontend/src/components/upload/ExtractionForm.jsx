@@ -1,15 +1,23 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { AlertCircle, AlertTriangle } from 'lucide-react'
 import { Button } from '../ui/Button'
-import { EXTRACTION_FIELDS, CONFIDENCE_THRESHOLD } from '../../lib/invoiceValidation'
+import {
+  CONFIDENCE_THRESHOLD,
+  EMPTY_FIELD_HINT,
+  EXTRACTION_FIELDS,
+} from '../../lib/invoiceValidation'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 
-function Row({ field, value, onChange, onBlur, error, lowConfidence, disabled }) {
+function Row({ field, value, onChange, onBlur, error, lowConfidence, isEmpty, disabled }) {
   const id = useId()
   const errorId = `${id}-error`
   const hintId = `${id}-hint`
 
-  const describedBy = [error ? errorId : null, lowConfidence && !error ? hintId : null]
+  // An empty field is a fact about the document, so its note is announced the
+  // same way a low-confidence one is — as a description, not an error.
+  const showEmptyHint = isEmpty && !error
+  const showLowConfidence = lowConfidence && !error && !isEmpty
+  const describedBy = [error ? errorId : null, showEmptyHint || showLowConfidence ? hintId : null]
     .filter(Boolean)
     .join(' ')
 
@@ -49,8 +57,9 @@ function Row({ field, value, onChange, onBlur, error, lowConfidence, disabled })
             field.prefix ? 'pl-7' : '',
             error
               ? 'border-risk-suspicious-edge'
-              : lowConfidence
+              : showLowConfidence
                 ? 'border-risk-review-edge'
+                // An empty field keeps the ordinary border: nothing is wrong.
                 : 'border-hairline-strong focus:border-accent/60',
           ]
             .filter(Boolean)
@@ -67,7 +76,11 @@ function Row({ field, value, onChange, onBlur, error, lowConfidence, disabled })
             <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             {error}
           </p>
-        ) : lowConfidence ? (
+        ) : showEmptyHint ? (
+          <p id={hintId} className="mt-1 text-[0.74rem] text-ink-muted">
+            {EMPTY_FIELD_HINT}
+          </p>
+        ) : showLowConfidence ? (
           <p
             id={hintId}
             className="mt-1 flex items-start gap-1.5 text-[0.74rem] text-risk-review"
@@ -143,8 +156,16 @@ export function ExtractionForm({ extraction, onSubmit, onDiscard, submitting }) 
     onSubmit(values)
   }
 
+  // Only fields that were read *and* read poorly. A field the document does
+  // not contain is not something the reviewer needs to go and check.
   const lowConfidenceCount = EXTRACTION_FIELDS.filter(
-    (f) => (extraction?.fields?.[f.key]?.confidence ?? 1) < CONFIDENCE_THRESHOLD,
+    (f) =>
+      String(values[f.key] ?? '').trim() &&
+      (extraction?.fields?.[f.key]?.confidence ?? 1) < CONFIDENCE_THRESHOLD,
+  ).length
+
+  const missingCount = EXTRACTION_FIELDS.filter(
+    (f) => !String(values[f.key] ?? '').trim(),
   ).length
 
   return (
@@ -157,6 +178,15 @@ export function ExtractionForm({ extraction, onSubmit, onDiscard, submitting }) 
           <AlertTriangle className="mt-px h-4 w-4 shrink-0" aria-hidden="true" />
           {lowConfidenceCount} {lowConfidenceCount === 1 ? 'field was' : 'fields were'} read with
           low confidence. Check {lowConfidenceCount === 1 ? 'it' : 'them'} before saving.
+        </p>
+      )}
+
+      {missingCount > 0 && lowConfidenceCount === 0 && (
+        <p className="mb-4 rounded-lg border border-hairline bg-base-800/60 px-3 py-2.5
+                      text-[0.8rem] leading-relaxed text-ink-secondary">
+          {missingCount} {missingCount === 1 ? 'field was' : 'fields were'} not found on this
+          document. That is normal for receipts and simple bills — leave them blank unless you
+          know the value.
         </p>
       )}
 
@@ -179,6 +209,7 @@ export function ExtractionForm({ extraction, onSubmit, onDiscard, submitting }) 
                 onBlur={handleBlur(field.key)}
                 error={touched[field.key] ? errors[field.key] : ''}
                 lowConfidence={confidence < CONFIDENCE_THRESHOLD}
+                isEmpty={isRevealed && !String(values[field.key] ?? '').trim()}
                 disabled={!isRevealed || submitting}
               />
             </div>

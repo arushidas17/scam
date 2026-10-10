@@ -5,10 +5,12 @@ import { AuthLayout, AuthDivider } from '../components/auth/AuthLayout'
 import { Field } from '../components/auth/Field'
 import { PasswordStrength } from '../components/auth/PasswordStrength'
 import { GoogleButton } from '../components/auth/GoogleButton'
+import { GOOGLE_AUTH_ENABLED } from '../lib/features'
 import { Button } from '../components/ui/Button'
 import { signUp, signInWithGoogle } from '../services/auth'
 import { useAuth } from '../context/useAuth'
 import {
+  freeEmailHint,
   validateEmail,
   validateNewPassword,
   validateRequired,
@@ -35,7 +37,7 @@ export default function Signup() {
   const validators = {
     fullName: (v) => validateRequired(v, 'full name'),
     companyName: (v) => validateRequired(v, 'company name'),
-    email: (v) => validateEmail(v, { requireWork: true }),
+    email: validateEmail,
     password: validateNewPassword,
   }
 
@@ -71,7 +73,7 @@ export default function Signup() {
       await signUp(values)
       // Adopt the new session before navigating, or ProtectedRoute still sees
       // a signed-out context and sends us straight back here.
-      refresh()
+      await refresh()
       navigate('/dashboard', { replace: true })
     } catch (error) {
       setFormError(error.message || 'Could not create your account. Try again.')
@@ -85,7 +87,7 @@ export default function Signup() {
     setGoogleLoading(true)
     try {
       await signInWithGoogle()
-      refresh()
+      await refresh()
       navigate('/dashboard', { replace: true })
     } catch (error) {
       setFormError(error.message || 'Could not continue with Google. Try again.')
@@ -112,14 +114,20 @@ export default function Signup() {
         </>
       }
     >
-      <GoogleButton
-        label="Continue with Google"
-        onClick={handleGoogle}
-        loading={googleLoading}
-        disabled={submitting}
-      />
+      {/* Hidden until Google OAuth is enabled in Supabase; the divider goes
+          with it, since "OR" with nothing above it reads as a mistake. */}
+      {GOOGLE_AUTH_ENABLED && (
+        <>
+          <GoogleButton
+            label="Continue with Google"
+            onClick={handleGoogle}
+            loading={googleLoading}
+            disabled={submitting}
+          />
 
-      <AuthDivider />
+          <AuthDivider />
+        </>
+      )}
 
       <form onSubmit={handleSubmit} noValidate className="space-y-1">
         <Field
@@ -152,6 +160,9 @@ export default function Signup() {
           onChange={setField('email')}
           onBlur={handleBlur('email')}
           error={touched.email ? errors.email : ''}
+          // Shown as the address is typed, not held back until blur: it is
+          // reassurance, so it is no use arriving after the fact.
+          hint={freeEmailHint(values.email)}
           autoComplete="email"
           placeholder="you@company.in"
           disabled={busy}

@@ -4,6 +4,7 @@ import { AlertCircle, ArrowRight, Loader2 } from 'lucide-react'
 import { AuthLayout, AuthDivider } from '../components/auth/AuthLayout'
 import { Field } from '../components/auth/Field'
 import { GoogleButton } from '../components/auth/GoogleButton'
+import { GOOGLE_AUTH_ENABLED } from '../lib/features'
 import { Button } from '../components/ui/Button'
 import { signIn, signInWithGoogle } from '../services/auth'
 import { useAuth } from '../context/useAuth'
@@ -14,8 +15,12 @@ export default function Login() {
   const location = useLocation()
   const { refresh } = useAuth()
 
-  // Where ProtectedRoute bounced them from, if anywhere.
-  const destination = location.state?.from ?? '/dashboard'
+  // Where ProtectedRoute bounced them from, if anywhere. The api client also
+  // sets ?next= when it redirects on a 401, so both routes back are honoured.
+  const destination =
+    location.state?.from ??
+    new URLSearchParams(location.search).get('next') ??
+    '/dashboard'
 
   const [values, setValues] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState({})
@@ -26,7 +31,7 @@ export default function Login() {
   const [formError, setFormError] = useState('')
 
   const validators = {
-    email: (v) => validateEmail(v, { requireWork: false }),
+    email: validateEmail,
     password: validateLoginPassword,
   }
 
@@ -61,7 +66,7 @@ export default function Login() {
       await signIn({ ...values, remember })
       // Adopt the new session before navigating, or ProtectedRoute still sees
       // a signed-out context and sends us straight back here.
-      refresh()
+      await refresh()
       navigate(destination, { replace: true })
     } catch (error) {
       setFormError(error.message || 'Could not sign you in. Try again.')
@@ -75,7 +80,7 @@ export default function Login() {
     setGoogleLoading(true)
     try {
       await signInWithGoogle()
-      refresh()
+      await refresh()
       navigate(destination, { replace: true })
     } catch (error) {
       setFormError(error.message || 'Could not sign you in with Google. Try again.')
@@ -102,14 +107,20 @@ export default function Login() {
         </>
       }
     >
-      <GoogleButton
-        label="Continue with Google"
-        onClick={handleGoogle}
-        loading={googleLoading}
-        disabled={submitting}
-      />
+      {/* Hidden until Google OAuth is enabled in Supabase; the divider goes
+          with it, since "OR" with nothing above it reads as a mistake. */}
+      {GOOGLE_AUTH_ENABLED && (
+        <>
+          <GoogleButton
+            label="Continue with Google"
+            onClick={handleGoogle}
+            loading={googleLoading}
+            disabled={submitting}
+          />
 
-      <AuthDivider />
+          <AuthDivider />
+        </>
+      )}
 
       <form onSubmit={handleSubmit} noValidate className="space-y-1">
         <Field

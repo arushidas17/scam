@@ -75,7 +75,9 @@ export function DecisionBar({ invoice, onDecide, decided }) {
     setSubmitting(true)
     setError('')
     try {
-      await onDecide(action, note)
+      // `verified` is the confirmation the backend requires before it will
+      // let a suspicious invoice be approved.
+      await onDecide(action, note, verified)
       setAction(null)
     } catch (err) {
       setError(err.message || 'That decision could not be recorded. Try again.')

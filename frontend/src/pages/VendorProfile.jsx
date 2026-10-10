@@ -8,6 +8,7 @@ import { StatusPill } from '../components/ui/StatusPill'
 import { MaskedAccount } from '../components/ui/MaskedValue'
 import { Skeleton, SkeletonLines, LoadingRegion } from '../components/ui/Skeleton'
 import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorState } from '../components/ui/ErrorState'
 import { useToast } from '../components/ui/useToast'
 import { AmountTrendChart } from '../components/vendors/AmountTrendChart'
 import { BankChangeTimeline } from '../components/vendors/BankChangeTimeline'
@@ -35,7 +36,7 @@ export default function VendorProfile() {
   const { toast } = useToast()
 
   const loader = useCallback(() => getVendor(id), [id])
-  const { data: vendor, loading, error } = useAsync(loader, [id])
+  const { data: vendor, loading, error, reload } = useAsync(loader, [id])
 
   const [trustedOverride, setTrustedOverride] = useState(null)
   const [savingTrust, setSavingTrust] = useState(false)
@@ -179,7 +180,19 @@ export default function VendorProfile() {
     )
   }
 
-  if (error || !vendor) {
+  // A 404 is a missing record; anything else is a failure worth retrying, and
+  // the two deserve different screens.
+  if (error && error.status !== 404) {
+    return (
+      <div className="mx-auto w-full max-w-[86rem]">
+        <div className="surface">
+          <ErrorState error={error} onRetry={reload} title="This vendor did not load" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!vendor) {
     return (
       <div className="mx-auto w-full max-w-[86rem]">
         <div className="surface">

@@ -4,6 +4,7 @@ import { Suspense, lazy, useEffect } from 'react'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
+import { ErrorBoundary } from './components/app/ErrorBoundary'
 import { ProtectedRoute } from './components/app/ProtectedRoute'
 
 // The signed-in app is split out of the public bundle: it pulls in Recharts
@@ -67,6 +68,9 @@ export default function App() {
     // One place to honour the OS motion setting for every Framer animation.
     <MotionConfig reducedMotion={reduced ? 'always' : 'never'}>
       <ScrollToTop />
+      {/* Catches anything a page throws, so a render error shows a readable
+          card rather than a blank screen. */}
+      <ErrorBoundary>
       <AnimatePresence mode="wait" initial={false}>
         <Routes location={location} key={isAppRoute ? 'app' : location.pathname}>
           <Route path="/" element={<Landing />} />
@@ -111,6 +115,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
+      </ErrorBoundary>
     </MotionConfig>
   )
 }

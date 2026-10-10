@@ -2,7 +2,9 @@
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
-// Addresses that are personal rather than a company account.
+// Consumer providers. These are perfectly valid addresses — the list only
+// drives a soft hint, never a rejection. Someone evaluating the product should
+// not be blocked at the door because they signed up with a personal address.
 const FREE_DOMAINS = new Set([
   'gmail.com',
   'yahoo.com',
@@ -16,17 +18,32 @@ const FREE_DOMAINS = new Set([
   'protonmail.com',
 ])
 
-export function validateEmail(value, { requireWork = true } = {}) {
+/**
+ * A real error, shown in red and blocking submission.
+ *
+ * Only the address being malformed qualifies. Which provider it belongs to is
+ * not a correctness problem, so it never produces an error here.
+ */
+export function validateEmail(value) {
   const email = value.trim()
-  if (!email) return 'Enter your work email address.'
+  if (!email) return 'Enter your email address.'
   if (!EMAIL_RE.test(email)) return 'That does not look like an email address yet.'
-  if (requireWork) {
-    const domain = email.split('@')[1]?.toLowerCase()
-    if (FREE_DOMAINS.has(domain)) {
-      return 'Use your work email so we can link you to your company.'
-    }
-  }
   return ''
+}
+
+/**
+ * A soft, non-blocking note for consumer addresses.
+ *
+ * Returns '' for anything else, so the field shows nothing in the common case.
+ * This is advice, not validation: it is rendered as a grey hint and the form
+ * submits regardless.
+ */
+export function freeEmailHint(value) {
+  const email = (value || '').trim()
+  if (!email || !EMAIL_RE.test(email)) return ''
+  const domain = email.split('@')[1]?.toLowerCase()
+  if (!FREE_DOMAINS.has(domain)) return ''
+  return 'Personal email is fine for now. A work email helps us link you to your company.'
 }
 
 export function validateRequired(value, label) {

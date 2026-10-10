@@ -5,6 +5,7 @@ import { PageHeader } from '../components/app/PageHeader'
 import { DataTable } from '../components/ui/DataTable'
 import { Pagination } from '../components/ui/Pagination'
 import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorState } from '../components/ui/ErrorState'
 import { RiskBadge } from '../components/ui/RiskBadge'
 import { StatusPill } from '../components/ui/StatusPill'
 import { Skeleton } from '../components/ui/Skeleton'
@@ -79,10 +80,12 @@ export default function Invoices() {
     [status, search, from, to, sort, direction, page],
   )
 
-  const { data, loading } = useAsync(loader, [status, search, from, to, sort, direction, page])
+  const { data, loading, error, reload } = useAsync(loader, [status, search, from, to, sort, direction, page])
 
   const rows = data?.rows ?? []
   const counts = data?.counts
+  // Nothing below reads a field off `data` unless this holds.
+  const hasData = !loading && !error && data !== null
   const hasFilters = !!(search || from || to)
   const isReviewQueue = status === 'needs_review'
 
@@ -210,7 +213,7 @@ export default function Invoices() {
         {/* Review queue summary line */}
         {isReviewQueue && (
           <div className="border-b border-hairline bg-risk-review-dim px-4 py-2.5">
-            {loading ? (
+            {loading || !hasData ? (
               <Skeleton className="h-3 w-72" />
             ) : (
               <p className="text-[0.82rem] text-ink-secondary">
@@ -225,7 +228,9 @@ export default function Invoices() {
           </div>
         )}
 
-        {!loading && rows.length === 0 ? (
+        {error ? (
+          <ErrorState error={error} onRetry={reload} title="The invoice list did not load" />
+        ) : !loading && rows.length === 0 ? (
           hasFilters ? (
             <EmptyState
               icon={SearchX}
@@ -285,7 +290,7 @@ export default function Invoices() {
               <InvoiceCards rows={rows} loading={loading} />
             </div>
 
-            {!loading && (
+            {hasData && (
               <Pagination
                 page={data.page}
                 pageCount={data.pageCount}
